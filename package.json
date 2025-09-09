@@ -1,0 +1,13 @@
+{
+  "name": "conttinova-bot",
+  "version": "1.0.0",
+  "main": "chatbot.js",
+  "scripts": {
+    "start": "node chatbot.js"
+  },
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.24.0",
+    "puppeteer": "^22.5.0"
+  }
+}
