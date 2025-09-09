@@ -1,33 +1,42 @@
-// npm i whatsapp-web.js qrcode-terminal puppeteer
+// npm i whatsapp-web.js qrcode-terminal puppeteer mongoose wwebjs-mongo
 
 const qrcode = require('qrcode-terminal');
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const fs = require('fs');
-const path = require('path');
+const { Client, RemoteAuth } = require('whatsapp-web.js');
+const mongoose = require('mongoose');
+const { MongoStore } = require('wwebjs-mongo');
 
-// ====== Caminhos usando ENV (Railway) ======
-const SESSION_DIR = process.env.SESSION_DIR || path.join(__dirname, '.wwebjs_auth');
-const LEADS_FILE  = process.env.LEADS_PATH  || path.join(__dirname, 'leads.csv');
+// Lê tanto nomes corretos quanto os "traduzidos" pelo navegador
+const MONGO_URL =
+  process.env.MONGO_URL ||
+  process.env.URL_MONGO ||          // seu nome atual
+  process.env.MONGODB_URL;
 
-// ====== Cliente com sessão persistente e Chromium do container ======
+const EXEC_PATH =
+  process.env.PUPPETEER_EXECUTABLE_PATH ||
+  process.env['CAMINHO_EXECUTIVO_DO_CATERIO_DE_TONETES'] || // seu nome atual
+  '/usr/bin/chromium';
+
+mongoose.connect(MONGO_URL, { dbName: 'wwebjs' })
+  .then(() => console.log('MongoDB conectado.'))
+  .catch(err => console.error('Erro conectando ao Mongo:', err));
+
+const store = new MongoStore({ mongoose });
+
 const client = new Client({
-  authStrategy: new LocalAuth({ dataPath: SESSION_DIR }),
+  authStrategy: new RemoteAuth({
+    store,
+    backupSyncIntervalMs: 300000
+  }),
   puppeteer: {
     headless: true,
     args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-zygote',
-      '--single-process'
+      '--no-sandbox','--disable-setuid-sandbox',
+      '--disable-dev-shm-usage','--disable-gpu',
+      '--no-zygote','--single-process'
     ],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH // /usr/bin/chromium no Dockerfile
+    executablePath: EXEC_PATH
   }
 });
-
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-async function typing(chat, ms = 3000) { await chat.sendStateTyping(); await delay(ms); }
 
 client.on('qr', qr => qrcode.generate(qr, { small: true }));
 client.on('ready', () => console.log('Tudo certo! WhatsApp conectado.'));
@@ -260,3 +269,4 @@ client.on('message', async (msg) => {
     await client.sendMessage(msg.from, `Vamos recomeçar.\n\n${msgs.saudacao(momentoDoDia())}`);
   }
 });
+
